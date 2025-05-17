@@ -39,6 +39,9 @@ type (
 
 		secretsClient         AzKeyVaultSecretsClientOperations
 		secretsClientProvider AzSecretsClientProvider
+
+		// support interfaces
+		Secret IKeyVaultSecret
 	}
 
 	// AzKeyVaultSecretsClientOperations defines the methods available from azure KEyVault for interacting with the SecretClient.
@@ -68,3 +71,28 @@ type (
 		kvClient *KeyVaultClient
 	}
 )
+
+// List all the secrets from the KeyVault.
+// This function returns a slice of a secret names and an error if any.
+// returns a list of secrets
+func (ksm *KeyVaultSecretsManager) List() ([]Secret, error) {
+	// create a slice of secrets
+	var secrets []Secret
+
+	// list all the secrets from the KeyVault
+	pager := ksm.kvClient.secretsClient.NewListSecretPropertiesPager(nil)
+	for pager.More() {
+		page, err := pager.NextPage(ksm.kvClient.ctx)
+		if err != nil {
+			return nil, checkAzErrResp(err)
+		}
+		for _, secret := range page.Value {
+			secrets = append(secrets, Secret{
+				Name:       secret.ID.Name(),
+				Expiration: *secret.Attributes.Expires,
+			})
+		}
+	}
+
+	return secrets, nil
+}
