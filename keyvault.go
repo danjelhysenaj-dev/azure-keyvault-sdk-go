@@ -124,3 +124,27 @@ func (ksm *KeyVaultSecretsManager) Get(name string) (*Secret, *errors.Error) {
 	// return secret and value
 	return retrievedSecret, nil
 }
+
+// Set function sets a secret in the Keyvault.
+// The secretName & secretValue are required to be set.
+// The function returns the response payload and an error if any.
+func (ksm *KeyVaultSecretsManager) Set(secret Secret) *errors.Error {
+
+	expirationDate := time.Now().Add(365 * 24 * time.Hour) // equivalent 1 year from now
+
+	// set secrets in the KeyVault
+	_, err := ksm.kvClient.secretsClient.SetSecret(ksm.kvClient.ctx, secret.Name, azsecrets.SetSecretParameters{
+		Value:       &secret.Value,
+		ContentType: nil,
+		SecretAttributes: &azsecrets.SecretAttributes{
+			Expires: &expirationDate,
+		}, Tags: nil,
+	}, nil)
+
+	// validate for errors
+	if err != nil {
+		return checkAzErrResp(err)
+	}
+
+	return nil
+}
