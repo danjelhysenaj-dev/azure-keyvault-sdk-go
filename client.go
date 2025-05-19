@@ -55,7 +55,7 @@ type (
 // The method returns an error if:
 // - There is an error while creating and making the http request.
 // - If the server returns a http error status code.
-func checkAzErrResp(err error) error {
+func checkAzErrResp(err error) *errors.Error {
 	if err == nil {
 		return nil
 	}
@@ -71,7 +71,7 @@ func checkAzErrResp(err error) error {
 		if err := json.NewDecoder(azRawErr.RawResponse.Body).Decode(&azErr); err != nil {
 			return errors.InternalServerErrorf("Unable to decode the azure error response: %v", err)
 		}
-		statusCode = azRawErr.StatusCode
+		statusCode = azRawErr.RawResponse.StatusCode
 		errMsg = azErr.Error.Message
 	} else {
 		errMsg = err.Error()

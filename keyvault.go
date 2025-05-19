@@ -2,11 +2,14 @@ package azure
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	"github.com/danjelhysenaj-dev/azure-keyvault-sdk-go/errors"
 )
 
 const (
@@ -54,10 +57,10 @@ type (
 
 	// IKeyVaultSecret defines the methods available for interacting with KeyVault.
 	IKeyVaultSecret interface {
-		List() ([]Secret, error)
-		Get(name string) (*Secret, error)
-		Set(secret Secret) error
-		Delete(name string) error
+		List() ([]Secret, *errors.Error)
+		Get(name string) (*Secret, *errors.Error)
+		Set(secret Secret) *errors.Error
+		Delete(name string) *errors.Error
 	}
 
 	// ListSecretPropertiesPager is an interface that represents the operations available for the ListSecretPropertiesPager.
@@ -95,4 +98,29 @@ func (ksm *KeyVaultSecretsManager) List() ([]Secret, error) {
 	}
 
 	return secrets, nil
+}
+
+// Get a secret from the KeyVault
+// The secretName is required to be set.
+// The function returns the response payload and an error if any.
+func (ksm *KeyVaultSecretsManager) Get(name string) (*Secret, *errors.Error) {
+	// get the secret from the KeyVault
+	resp, getErr := ksm.kvClient.secretsClient.GetSecret(ksm.kvClient.ctx, name, "", nil)
+	if getErr != nil {
+		err := checkAzErrResp(getErr)
+
+		if err.Status == http.StatusNotFound {
+			err.Message = fmt.Sprintf(secretNotFoundErrMsgFmt, name, ksm.kvClient.name)
+		}
+		return nil, err
+	}
+	// create secret object from response
+	retrievedSecret := &Secret{
+		Name:       name,
+		Value:      *resp.Value,
+		Expiration: *resp.Attributes.Expires,
+	}
+
+	// return secret and value
+	return retrievedSecret, nil
 }

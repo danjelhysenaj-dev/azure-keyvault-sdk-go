@@ -31,6 +31,25 @@ func (e *Error) Error() string {
 	return msg
 }
 
+// New returns an Error
+func New(code string, status int, message string) *Error {
+	return &Error{
+		Code:    code,
+		Status:  status,
+		Message: message,
+		TraceId: "",
+	}
+}
+
+// Newf formats according to a format specifier for the message and returns the Error.
+func Newf(code string, status int, format string, a ...any) *Error {
+	return &Error{
+		Code:    code,
+		Status:  status,
+		Message: fmt.Sprintf(format, a...),
+	}
+}
+
 func InternalServerError(message string) *Error {
 	return &Error{
 		Code:    ErrCodeInternalServerError,
